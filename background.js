@@ -26,6 +26,12 @@ chrome.action.onClicked.addListener(async (tab) => {
       text: nextState,
     });
 
+    if (nextState !== BADGE_LABELS.OFF) {
+      await chrome.action.setBadgeBackgroundColor({
+        color: nextState === BADGE_LABELS.DARK ? "#000000" : nextState === BADGE_LABELS.LIGHT ? "#FFFFFF" : "",
+        tabId: tab.id,
+      })
+    }
     const target = { tabId: tab.id };
 
     switch (nextState) {
