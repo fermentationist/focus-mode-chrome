@@ -1,0 +1,4 @@
+/* cheap dark mode */
+canvas {
+  filter: invert(1);
+}

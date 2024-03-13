@@ -1,9 +1,11 @@
 const GOOGLE_DOCS_URL = "https://docs.google.com/document/";
 const BADGE_LABELS = {
-  ON: "ON",
-  OFF: "",
+  LIGHT: "☉",
+  DARK: "☽",
+  OFF: "", // Empty string to remove the badge
 }
 
+// Set the badge to 'OFF' when the extension is installed
 chrome.runtime.onInstalled.addListener(() => {
   chrome.action.setBadgeText({
     text: BADGE_LABELS.OFF,
@@ -12,28 +14,32 @@ chrome.runtime.onInstalled.addListener(() => {
 
 
 chrome.action.onClicked.addListener(async (tab) => {
+  // Check if the current tab is a Google Docs tab
   if (tab.url.startsWith(GOOGLE_DOCS_URL)) {
     // We retrieve the action badge to check if the extension is 'ON' or 'OFF'
     const prevState = await chrome.action.getBadgeText({ tabId: tab.id });
-    // Next state will always be the opposite
-    const nextState = prevState === BADGE_LABELS.ON ? BADGE_LABELS.OFF : BADGE_LABELS.ON;
+    // Set the next state based on the previous state
+    const nextState = prevState === BADGE_LABELS.LIGHT ? BADGE_LABELS.DARK : prevState === BADGE_LABELS.DARK ? BADGE_LABELS.OFF : BADGE_LABELS.LIGHT;
     // Set the action badge to the next state
     await chrome.action.setBadgeText({
       tabId: tab.id,
       text: nextState,
     });
 
-    const options = {
-      files: ["index.css"],
-      target: { tabId: tab.id },
-    }
+    const target = { tabId: tab.id };
 
-    if (nextState === BADGE_LABELS.ON) {
-      // Insert the CSS file when the user turns the extension on
-      await chrome.scripting.insertCSS(options);
-    } else if (nextState === BADGE_LABELS.OFF) {
-      // Remove the CSS file when the user turns the extension off
-      await chrome.scripting.removeCSS(options);
+    switch (nextState) {
+      case BADGE_LABELS.LIGHT:
+        await chrome.scripting.insertCSS({ target, files: ["index.css"] });
+        break;
+      case BADGE_LABELS.DARK:
+        await chrome.scripting.insertCSS({ target, files: ["dark.css"] });
+        break;
+      case BADGE_LABELS.OFF:
+        await chrome.scripting.removeCSS({ target, files: ["index.css", "dark.css"] });
+        break;
+      default:
+        break;
     }
   }
 });
