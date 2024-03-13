@@ -1,0 +1,33 @@
+#docs-chrome {
+  display: none!important
+}
+
+.kix-appview-editor {
+  height: 100vh !important;
+  background-color: darkgray !important;
+}
+
+.left-sidebar-container-content {
+  display: none;
+}
+
+.right-sidebar-container-content {
+  display: none;
+}
+
+[role="dialog"] {
+  display: none;
+}
+
+#kix-horizontal-ruler-container {
+  display: none;
+}
+
+#kix-vertical-ruler-container {
+  display: none;
+}
+
+/* dark mode */
+/* canvas {
+  filter: invert(1);
+} */
