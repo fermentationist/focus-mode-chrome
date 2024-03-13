@@ -39,7 +39,7 @@ chrome.action.onClicked.addListener(async (tab) => {
         await chrome.scripting.removeCSS({ target, files: ["index.css", "dark.css"] });
         break;
       default:
-        break;
+        throw new Error("Invalid state");
     }
   }
 });
