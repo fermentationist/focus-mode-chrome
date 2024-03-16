@@ -1,51 +1,55 @@
 const GOOGLE_DOCS_URL = "https://docs.google.com/document/";
-const BADGE_LABELS = {
-  LIGHT: "☉",
-  DARK: "☽",
-  OFF: "", // Empty string to remove the badge
-}
 
-// Set the badge to 'OFF' when the extension is installed
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.action.setBadgeText({
-    text: BADGE_LABELS.OFF,
+const APP_STATES = {
+  OFF: { iconSet: "default" },
+  LIGHT: { iconSet: "light", requiredCss: ["css/default.css"] },
+  DARK: { iconSet: "dark", requiredCss: ["css/default.css", "css/dark.css"] },
+};
+
+const allCssFiles = Array.from(Object.values(APP_STATES).reduce((files, state) => {
+  state.requiredCss && state.requiredCss.forEach((file) => files.add(file));
+  return files;
+}, new Set()));
+
+const ORDERED_STATES = [APP_STATES.OFF, APP_STATES.LIGHT, APP_STATES.DARK];
+
+let currentState = APP_STATES.OFF;
+
+const setIcon = async (state) => {
+  await chrome.action.setIcon({
+    path: {
+      16: `images/icons/${state.iconSet}/icon-16.png`,
+      48: `images/icons/${state.iconSet}/icon-48.png`,
+      128: `images/icons/${state.iconSet}/icon-128.png`,
+    },
   });
+};
+
+// set the initial icon
+chrome.runtime.onInstalled.addListener(() => {
+  setIcon(currentState);
 });
 
-
 chrome.action.onClicked.addListener(async (tab) => {
-  // Check if the current tab is a Google Docs tab
-  if (tab.url.startsWith(GOOGLE_DOCS_URL)) {
-    // We retrieve the action badge to check if the extension is 'ON' or 'OFF'
-    const prevState = await chrome.action.getBadgeText({ tabId: tab.id });
-    // Set the next state based on the previous state
-    const nextState = prevState === BADGE_LABELS.LIGHT ? BADGE_LABELS.DARK : prevState === BADGE_LABELS.DARK ? BADGE_LABELS.OFF : BADGE_LABELS.LIGHT;
-    // Set the action badge to the next state
-    await chrome.action.setBadgeText({
-      tabId: tab.id,
-      text: nextState,
-    });
-
-    if (nextState !== BADGE_LABELS.OFF) {
-      await chrome.action.setBadgeBackgroundColor({
-        color: nextState === BADGE_LABELS.DARK ? "#000000" : nextState === BADGE_LABELS.LIGHT ? "#FFFFFF" : "",
-        tabId: tab.id,
-      })
-    }
-    const target = { tabId: tab.id };
-
-    switch (nextState) {
-      case BADGE_LABELS.LIGHT:
-        await chrome.scripting.insertCSS({ target, files: ["index.css"] });
-        break;
-      case BADGE_LABELS.DARK:
-        await chrome.scripting.insertCSS({ target, files: ["dark.css"] });
-        break;
-      case BADGE_LABELS.OFF:
-        await chrome.scripting.removeCSS({ target, files: ["index.css", "dark.css"] });
-        break;
-      default:
-        throw new Error("Invalid state");
-    }
+  // If the current tab is not a Google Docs tab, return
+  if (!tab.url.startsWith(GOOGLE_DOCS_URL)) {
+    return;
   }
+  // cycle through the states to the next state
+  const nextState =
+    ORDERED_STATES[
+      (ORDERED_STATES.indexOf(currentState) + 1) % ORDERED_STATES.length
+    ];
+
+  // update the current state
+  currentState = nextState;
+
+  // update the icon
+  await setIcon(currentState);
+  const target = { tabId: tab.id };
+
+  // apply the corresponding CSS file
+  await chrome.scripting.removeCSS({ target, files: allCssFiles });
+  nextState.requiredCss &&
+    (await chrome.scripting.insertCSS({ target, files: nextState.requiredCss }));
 });
